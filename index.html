@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDBC Interactive Masterclass</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Corporate Blue & Slate -->
+    <!-- The palette uses Slate (gray-blue) for structure and Blue-600 for primary actions, creating a professional, technical feel suitable for Java documentation. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+        }
+        
+        pre, code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Chart Container Styling Requirement */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Max width constraint */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .code-block {
+            background-color: #1e293b; /* Slate 800 */
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .active-nav {
+            background-color: #2563eb; /* Blue 600 */
+            color: white;
+            border-left: 4px solid #1e40af; /* Blue 800 */
+        }
+
+        .nav-item:hover:not(.active-nav) {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+        
+        .step-circle {
+            transition: all 0.3s ease;
+        }
+    </style>
+    
+    <!-- Application Structure Plan: 
+         The app uses a Dashboard layout with a fixed sidebar (desktop) / drawer (mobile) and a dynamic main content area.
+         Sections are:
+         1. Concept Hub: High-level intro and architecture (Visual blocks).
+         2. Driver Analysis: Interactive Chart.js comparing driver types (Performance/Portability).
+         3. Connection Lab: Step-by-step code builder.
+         4. CRUD Console: A simulated database environment where users input data and see 'tables' update.
+         5. Transaction Sim: A bank transfer demo to visually explain Commit/Rollback.
+         This structure moves from theory (drivers) to practice (connection) to execution (CRUD/Transactions), mirroring the learning curve.
+    -->
+</head>
+<body class="text-slate-800">
+
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <h1 class="text-xl font-bold"><i class="fas fa-database mr-2"></i>JDBC Masterclass</h1>
+        <button id="menuBtn" class="text-white focus:outline-none">
+            <i class="fas fa-bars text-2xl"></i>
+        </button>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="bg-white w-64 flex-shrink-0 border-r border-slate-200 hidden md:flex flex-col h-full transition-all duration-300 absolute md:relative z-40 transform -translate-x-full md:translate-x-0">
+            <div class="p-6 bg-slate-900 text-white">
+                <h1 class="text-2xl font-bold tracking-tight"><i class="fas fa-database mr-2 text-blue-400"></i>JDBC<span class="font-light text-slate-400">Guide</span></h1>
+                <p class="text-xs text-slate-400 mt-2">Java Database Connectivity</p>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto py-4">
+                <ul class="space-y-1">
+                    <li><button onclick="navigate('overview')" class="nav-item w-full text-left px-6 py-3 font-medium active-nav" id="nav-overview"><i class="fas fa-layer-group w-6 text-center"></i> Overview & Arch</button></li>
+                    <li><button onclick="navigate('drivers')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-drivers"><i class="fas fa-microchip w-6 text-center"></i> Drivers & Perf</button></li>
+                    <li><button onclick="navigate('connection')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-connection"><i class="fas fa-plug w-6 text-center"></i> Connection Steps</button></li>
+                    <li><button onclick="navigate('crud')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-crud"><i class="fas fa-terminal w-6 text-center"></i> Statements & CRUD</button></li>
+                    <li><button onclick="navigate('resultset')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-resultset"><i class="fas fa-table w-6 text-center"></i> ResultSet Nav</button></li>
+                    <li><button onclick="navigate('transactions')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-transactions"><i class="fas fa-exchange-alt w-6 text-center"></i> Transactions</button></li>
+                    <li><button onclick="navigate('threading')" class="nav-item w-full text-left px-6 py-3 font-medium text-slate-600" id="nav-threading"><i class="fas fa-network-wired w-6 text-center"></i> Multithreading</button></li>
+                </ul>
+            </nav>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50">
+                <div class="text-xs text-slate-500 text-center">
+                    Based on <span class="font-semibold">Lecture Notes 25-30</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8" id="main-content">
+            <!-- Dynamic Content Injected Here -->
+        </main>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- Data Store ---
+        const jdbcData = {
+            overview: {
+                title: "Introduction & Architecture",
+                content: `
+                    <div class="mb-8">
+                        <p class="text-lg text-slate-600 mb-4 leading-relaxed">
+                            JDBC (Java Database Connectivity) acts as a bridge, enabling Java applications to send SQL statements to relational databases like MySQL, Oracle, or PostgreSQL. It abstracts the complexity of different database protocols into a unified Java API.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Component Card -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="fas fa-cubes text-blue-600 mr-2"></i> Key Components</h3>
+                            <ul class="space-y-3">
+                                <li class="flex items-start"><span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded mr-2 mt-1">API</span> <span class="text-slate-600"><strong>java.sql / javax.sql</strong>: Standard interfaces like Connection, Statement, ResultSet.</span></li>
+                                <li class="flex items-start"><span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded mr-2 mt-1">Manager</span> <span class="text-slate-600"><strong>DriverManager</strong>: Manages driver list and matches connection requests.</span></li>
+                                <li class="flex items-start"><span class="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-1 rounded mr-2 mt-1">Driver</span> <span class="text-slate-600"><strong>JDBC Driver</strong>: Client-side adapter converting Java calls to DB protocol.</span></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Architecture Viz -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="fas fa-sitemap text-blue-600 mr-2"></i> Architecture Models</h3>
+                            <div class="space-y-4">
+                                <div class="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-blue-50 transition-colors cursor-pointer">
+                                    <h4 class="font-bold text-slate-700">Two-Tier (Client-Server)</h4>
+                                    <div class="flex items-center justify-between mt-2 text-sm text-slate-500">
+                                        <span class="p-2 bg-white border rounded shadow-sm">Java App</span>
+                                        <i class="fas fa-arrow-right text-slate-400"></i>
+                                        <span class="p-2 bg-white border rounded shadow-sm">Database</span>
+                                    </div>
+                                </div>
+                                <div class="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-blue-50 transition-colors cursor-pointer">
+                                    <h4 class="font-bold text-slate-700">Three-Tier (Web Apps)</h4>
+                                    <div class="flex items-center justify-between mt-2 text-sm text-slate-500">
+                                        <span class="p-2 bg-white border rounded shadow-sm">Java App</span>
+                                        <i class="fas fa-arrow-right text-slate-400"></i>
+                                        <span class="p-2 bg-blue-100 border border-blue-200 rounded shadow-sm text-blue-800">Middleware</span>
+                                        <i class="fas fa-arrow-right text-slate-400"></i>
+                                        <span class="p-2 bg-white border rounded shadow-sm">Database</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            drivers: {
+                title: "JDBC Driver Types",
+                intro: "There are four types of JDBC drivers. Type 4 is the modern industry standard. Explore the comparison below to understand why.",
+                chartData: {
+                    labels: ['Type 1 (Bridge)', 'Type 2 (Native)', 'Type 3 (Network)', 'Type 4 (Thin)'],
+                    datasets: [{
+                        label: 'Performance Score (1-10)',
+                        data: [2, 6, 7, 9],
+                        backgroundColor: 'rgba(37, 99, 235, 0.6)', // Blue-600
+                        borderColor: 'rgb(37, 99, 235)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Portability Score (1-10)',
+                        data: [1, 3, 9, 10],
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)', // Emerald-500
+                        borderColor: 'rgb(16, 185, 129)',
+                        borderWidth: 1
+                    }]
+                }
+            },
+            crud: {
+                title: "Statements & CRUD Lab",
+                intro: "Simulate database interactions. Use the console below to add students to the virtual database using <code>PreparedStatement</code> logic.",
+                students: [
+                    { id: 101, name: "Amit", marks: 95 },
+                    { id: 102, name: "Priya", marks: 88 }
+                ]
+            }
+        };
+
+        // --- State Management ---
+        let currentState = {
+            view: 'overview',
+            db: [...jdbcData.crud.students],
+            resultSetIndex: -1,
+            accountA: 1000,
+            accountB: 1000,
+            transactionLog: []
+        };
+
+        // --- Navigation Logic ---
+        function navigate(viewId) {
+            currentState.view = viewId;
+            
+            // Update Sidebar
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active-nav', 'bg-blue-50', 'text-blue-700');
+                el.classList.add('text-slate-600');
+            });
+            const activeBtn = document.getElementById(`nav-${viewId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('active-nav');
+                activeBtn.classList.remove('text-slate-600');
+            }
+
+            // Close mobile menu if open
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('hidden') && window.innerWidth < 768) {
+                sidebar.classList.add('-translate-x-full');
+            }
+
+            renderContent(viewId);
+        }
+
+        // --- Render Content ---
+        function renderContent(viewId) {
+            const main = document.getElementById('main-content');
+            main.innerHTML = ''; // Clear
+
+            const header = document.createElement('div');
+            header.className = "mb-6";
+            
+            let contentHTML = '';
+
+            switch(viewId) {
+                case 'overview':
+                    header.innerHTML = `
+                        <h2 class="text-3xl font-bold text-slate-800">${jdbcData.overview.title}</h2>
+                        <p class="text-slate-500 mt-2">Foundation of Java Database Connectivity</p>
+                    `;
+                    contentHTML = jdbcData.overview.content;
+                    break;
+                
+                case 'drivers':
+                    header.innerHTML = `
+                        <h2 class="text-3xl font-bold text-slate-800">${jdbcData.drivers.title}</h2>
+                        <p class="text-slate-500 mt-2">${jdbcData.drivers.intro}</p>
+                    `;
+                    contentHTML = `
+                        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                            <!-- Chart Section -->
+                            <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="text-lg font-bold mb-4">Performance vs. Portability</h3>
+                                <div class="chart-container">
+                                    <canvas id="driverChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Details Section -->
+                            <div class="space-y-4">
+                                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
+                                    <h4 class="font-bold text-red-800">Type 1: JDBC-ODBC Bridge</h4>
+                                    <p class="text-sm text-red-700 mt-1">Deprecated. Relies on OS drivers. Slow & Platform dependent.</p>
+                                </div>
+                                <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
+                                    <h4 class="font-bold text-orange-800">Type 2: Native-API</h4>
+                                    <p class="text-sm text-orange-700 mt-1">Uses C/C++ libraries. Faster, but requires client-side install.</p>
+                                </div>
+                                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+                                    <h4 class="font-bold text-blue-800">Type 3: Network Protocol</h4>
+                                    <p class="text-sm text-blue-700 mt-1">Middleware based. Platform independent, flexible for web.</p>
+                                </div>
+                                <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm transform scale-105 transition-transform">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-bold text-green-800">Type 4: Thin Driver</h4>
+                                        <span class="bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full font-bold">RECOMMENDED</span>
+                                    </div>
+                                    <p class="text-sm text-green-700 mt-1">100% Java. Converts directly to vendor protocol. No client install. Fastest.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'connection':
+                    header.innerHTML = `<h2 class="text-3xl font-bold text-slate-800">7 Steps to Connect</h2><p class="text-slate-500 mt-2">The standard lifecycle of a JDBC connection.</p>`;
+                    contentHTML = `
+                        <div class="flex flex-col lg:flex-row gap-8">
+                            <!-- Vertical Stepper -->
+                            <div class="w-full lg:w-1/3 space-y-4">
+                                ${[
+                                    {step: 1, title: "Import Packages", desc: "import java.sql.*;"},
+                                    {step: 2, title: "Load Driver", desc: "Class.forName(...);"},
+                                    {step: 3, title: "Register Driver", desc: "Via DriverManager"},
+                                    {step: 4, title: "Connect", desc: "DriverManager.getConnection()"},
+                                    {step: 5, title: "Create Statement", desc: "con.createStatement()"},
+                                    {step: 6, title: "Execute Query", desc: "CRUD Operations"},
+                                    {step: 7, title: "Close", desc: "Release resources"}
+                                ].map(s => `
+                                    <div class="flex items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer transition-colors group" onclick="showCodeStep(${s.step})">
+                                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">${s.step}</div>
+                                        <div>
+                                            <h4 class="font-bold text-slate-700">${s.title}</h4>
+                                            <p class="text-xs text-slate-500 font-mono">${s.desc}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            <!-- Dynamic Code Preview -->
+                            <div class="w-full lg:w-2/3">
+                                <div class="bg-slate-800 rounded-xl shadow-lg p-6 text-white h-full relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 p-4 opacity-20"><i class="fas fa-code text-6xl"></i></div>
+                                    <h3 class="text-xl font-bold mb-4 text-blue-400" id="stepTitle">Complete Example</h3>
+                                    <pre class="text-sm md:text-base overflow-x-auto text-green-300" id="codeDisplay">
+import java.sql.*;
+
+public class Main {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/db";
+        
+        // Try-with-resources (Best Practice)
+        try (Connection con = DriverManager.getConnection(url, "user", "pass")) {
+            System.out.println("Connected!");
+            
+            // Logic here...
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'crud':
+                    header.innerHTML = `<h2 class="text-3xl font-bold text-slate-800">Statement Types & CRUD</h2><p class="text-slate-500 mt-2">Interact with the virtual database using PreparedStatement logic.</p>`;
+                    contentHTML = `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Control Panel -->
+                            <div class="space-y-6">
+                                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <h3 class="font-bold text-lg mb-4 text-slate-700">Statement Selection</h3>
+                                    <div class="flex space-x-2 bg-slate-100 p-1 rounded-lg">
+                                        <button onclick="switchStatement('stmt')" class="flex-1 py-2 rounded text-sm font-medium transition-colors bg-white shadow-sm text-blue-700" id="btn-stmt">Statement</button>
+                                        <button onclick="switchStatement('pstmt')" class="flex-1 py-2 rounded text-sm font-medium transition-colors text-slate-600 hover:bg-white" id="btn-pstmt">PreparedStmt</button>
+                                        <button onclick="switchStatement('cstmt')" class="flex-1 py-2 rounded text-sm font-medium transition-colors text-slate-600 hover:bg-white" id="btn-cstmt">CallableStmt</button>
+                                    </div>
+                                    <div id="statement-desc" class="mt-4 text-sm text-slate-600 bg-blue-50 p-3 rounded border border-blue-100">
+                                        <strong>Statement:</strong> General purpose. Vulnerable to SQL Injection. Slower compilation.
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <h3 class="font-bold text-lg mb-4 text-slate-700">Insert Data (PreparedStatement)</h3>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 uppercase">ID</label>
+                                            <input type="number" id="input-id" class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="103">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 uppercase">Name</label>
+                                            <input type="text" id="input-name" class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="John Doe">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 uppercase">Marks</label>
+                                            <input type="number" id="input-marks" class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="85">
+                                        </div>
+                                        <button onclick="runInsert()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors shadow-sm">
+                                            <i class="fas fa-play mr-2"></i> ps.executeUpdate()
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Visualization -->
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <h3 class="font-bold text-lg mb-4 text-slate-700 flex justify-between">
+                                    <span>Database: Students Table</span>
+                                    <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">jdbc:mysql://localhost:3306/testdb</span>
+                                </h3>
+                                <div class="flex-1 overflow-auto border border-slate-200 rounded-lg">
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th class="p-3">ID</th>
+                                                <th class="p-3">Name</th>
+                                                <th class="p-3">Marks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="db-table-body" class="divide-y divide-slate-100">
+                                            <!-- Rows generated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="query-log" class="mt-4 font-mono text-xs text-green-600 p-2 bg-slate-900 rounded">
+                                    > System ready...
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                case 'resultset':
+                    header.innerHTML = `<h2 class="text-3xl font-bold text-slate-800">ResultSet Navigation</h2><p class="text-slate-500 mt-2">Explore how the cursor moves through query results.</p>`;
+                    contentHTML = `
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
+                            <!-- Controls -->
+                            <div class="flex flex-wrap gap-2 mb-6 justify-center">
+                                <button onclick="rsMove('first')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded font-medium transition-colors">rs.first()</button>
+                                <button onclick="rsMove('previous')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded font-medium transition-colors">rs.previous()</button>
+                                <button onclick="rsMove('next')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium transition-colors shadow-sm">rs.next()</button>
+                                <button onclick="rsMove('last')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded font-medium transition-colors">rs.last()</button>
+                            </div>
+
+                            <!-- Visual Table -->
+                            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-800 text-white">
+                                        <tr>
+                                            <th class="p-3 w-10">Cursor</th>
+                                            <th class="p-3">Row Index</th>
+                                            <th class="p-3">Data (ID: Name)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rs-table-body">
+                                        <!-- JS Generated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span id="rs-status">Cursor is currently before the first row (Initial State).</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h4 class="font-bold text-slate-700 mb-2">ResultSet Types</h4>
+                                <ul class="text-sm space-y-2 text-slate-600">
+                                    <li><strong>FORWARD_ONLY:</strong> Default. Can only move next().</li>
+                                    <li><strong>SCROLL_INSENSITIVE:</strong> Can scroll back/forth. Static view.</li>
+                                    <li><strong>SCROLL_SENSITIVE:</strong> Scrollable. Shows live DB changes.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h4 class="font-bold text-slate-700 mb-2">Concurrency Modes</h4>
+                                <ul class="text-sm space-y-2 text-slate-600">
+                                    <li><strong>READ_ONLY:</strong> Data cannot be updated via ResultSet.</li>
+                                    <li><strong>UPDATABLE:</strong> Can use <code>rs.updateString()</code> etc.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'transactions':
+                    header.innerHTML = `<h2 class="text-3xl font-bold text-slate-800">Transaction Management</h2><p class="text-slate-500 mt-2">Simulate ACID properties with a bank transfer.</p>`;
+                    contentHTML = `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Simulator -->
+                            <div class="bg-white p-8 rounded-xl border border-slate-200 shadow-sm relative">
+                                <div class="absolute top-4 right-4 text-xs font-mono text-slate-400">con.setAutoCommit(false)</div>
+                                <h3 class="font-bold text-xl mb-6 text-center text-slate-800">Bank Transfer Simulator</h3>
+                                
+                                <div class="flex justify-between items-center mb-8">
+                                    <div class="text-center p-4 bg-blue-50 rounded-lg border border-blue-100 w-1/3">
+                                        <div class="text-slate-500 text-xs uppercase font-bold mb-1">Account A</div>
+                                        <div class="text-2xl font-bold text-blue-600">$<span id="bal-a">${currentState.accountA}</span></div>
+                                    </div>
+                                    <i class="fas fa-arrow-right text-slate-300 text-2xl"></i>
+                                    <div class="text-center p-4 bg-green-50 rounded-lg border border-green-100 w-1/3">
+                                        <div class="text-slate-500 text-xs uppercase font-bold mb-1">Account B</div>
+                                        <div class="text-2xl font-bold text-green-600">$<span id="bal-b">${currentState.accountB}</span></div>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col space-y-3">
+                                    <button id="btn-transfer" onclick="startTransaction()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded transition-colors shadow-lg">
+                                        Step 1: Transfer $500 (Pending)
+                                    </button>
+                                    
+                                    <div id="trans-actions" class="flex space-x-3 hidden opacity-0 transition-opacity duration-500">
+                                        <button onclick="commitTransaction()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded transition-colors shadow">
+                                            <i class="fas fa-check mr-2"></i> con.commit()
+                                        </button>
+                                        <button onclick="rollbackTransaction()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded transition-colors shadow">
+                                            <i class="fas fa-undo mr-2"></i> con.rollback()
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p id="trans-status" class="mt-6 text-center text-sm font-medium text-slate-500 min-h-[1.5rem]"></p>
+                            </div>
+
+                            <!-- Explainer -->
+                            <div class="space-y-6">
+                                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <h4 class="font-bold text-slate-800 mb-2">ACID Properties</h4>
+                                    <ul class="space-y-2 text-sm text-slate-600">
+                                        <li><span class="font-bold text-blue-600">Atomicity:</span> All or nothing. If step 2 fails, step 1 must be undone.</li>
+                                        <li><span class="font-bold text-blue-600">Consistency:</span> Database moves from one valid state to another.</li>
+                                        <li><span class="font-bold text-blue-600">Isolation:</span> Transactions don't interfere with each other.</li>
+                                        <li><span class="font-bold text-blue-600">Durability:</span> Committed changes are permanent.</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="bg-slate-900 p-6 rounded-xl shadow-lg text-slate-300 font-mono text-xs overflow-x-auto">
+                                    <div class="mb-2 text-slate-500">// Transaction Log</div>
+                                    <div id="trans-log" class="space-y-1">
+                                        <div>> Ready for transaction...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                case 'threading':
+                    header.innerHTML = `<h2 class="text-3xl font-bold text-slate-800">Multithreading & Pooling</h2><p class="text-slate-500 mt-2">Optimizing database access for high-load applications.</p>`;
+                    contentHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-lg text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i> The Problem</h3>
+                                <p class="text-slate-600 mb-4">Creating a new connection for every user request is expensive (slow) and sharing a single connection object across threads causes race conditions and data corruption.</p>
+                                <div class="bg-red-50 p-4 rounded text-red-800 text-sm font-mono border border-red-100">
+                                    // BAD PRACTICE<br>
+                                    static Connection con; // Shared across threads!
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-lg text-green-600 mb-4"><i class="fas fa-check-circle mr-2"></i> The Solution</h3>
+                                <p class="text-slate-600 mb-4">Use a <strong>Connection Pool</strong> (like HikariCP). Threads "borrow" connections and return them when done. Also, use try-with-resources to ensure auto-closure.</p>
+                                <div class="bg-green-50 p-4 rounded text-green-800 text-sm font-mono border border-green-100">
+                                    // BEST PRACTICE<br>
+                                    try (Connection con = dataSource.getConnection()) {<br>
+                                    &nbsp;&nbsp;// Thread-safe usage<br>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-lg text-slate-800 mb-4">Connection Pool Visualization</h3>
+                            <div class="flex items-center justify-center space-x-4 mb-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-16 h-20 bg-slate-200 rounded-lg flex items-end justify-center pb-2 relative overflow-hidden border border-slate-300">
+                                        <div class="w-full bg-blue-500 absolute bottom-0 transition-all duration-1000" style="height: 60%"></div>
+                                        <span class="relative z-10 text-xs font-bold">Pool</span>
+                                    </div>
+                                    <span class="text-xs mt-1">HikariCP</span>
+                                </div>
+                                <i class="fas fa-arrow-right text-slate-400"></i>
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-slate-600"><i class="fas fa-user mr-2 text-slate-400"></i> Thread 1: <span class="text-green-600 font-bold ml-1">Active</span></div>
+                                    <div class="flex items-center text-sm text-slate-600"><i class="fas fa-user mr-2 text-slate-400"></i> Thread 2: <span class="text-green-600 font-bold ml-1">Active</span></div>
+                                    <div class="flex items-center text-sm text-slate-600"><i class="fas fa-user mr-2 text-slate-400"></i> Thread 3: <span class="text-amber-500 font-bold ml-1">Waiting...</span></div>
+                                </div>
+                            </div>
+                            <p class="text-center text-sm text-slate-500 italic">Simulated view of threads checking out connections.</p>
+                        </div>
+                    `;
+                    break;
+            }
+
+            main.appendChild(header);
+            
+            // Content Container
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = contentHTML;
+            main.appendChild(contentDiv);
+
+            // Post-Render Initializations
+            if(viewId === 'drivers') initDriverChart();
+            if(viewId === 'crud') renderDBTable();
+            if(viewId === 'resultset') renderRSTable();
+        }
+
+        // --- Logic: Driver Chart ---
+        function initDriverChart() {
+            const ctx = document.getElementById('driverChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: jdbcData.drivers.chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: { display: true, text: 'Score (1-10)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Logic: Code Steps ---
+        const codeSteps = {
+            1: 'import java.sql.*; // Import required classes',
+            2: '// Optional in JDBC 4.0+\nClass.forName("com.mysql.cj.jdbc.Driver");',
+            3: '// Handled automatically by DriverManager in modern Java',
+            4: 'String url = "jdbc:mysql://localhost:3306/db";\nConnection con = DriverManager.getConnection(url, "user", "pass");',
+            5: 'Statement stmt = con.createStatement();',
+            6: 'ResultSet rs = stmt.executeQuery("SELECT * FROM students");',
+            7: 'con.close(); // Important! Or use try-with-resources'
+        };
+
+        function showCodeStep(step) {
+            const display = document.getElementById('codeDisplay');
+            const title = document.getElementById('stepTitle');
+            
+            // Highlight effect
+            display.parentElement.classList.add('ring-2', 'ring-blue-500');
+            setTimeout(() => display.parentElement.classList.remove('ring-2', 'ring-blue-500'), 300);
+
+            title.innerText = `Step ${step} Logic`;
+            display.innerText = codeSteps[step];
+        }
+
+        // --- Logic: CRUD ---
+        function switchStatement(type) {
+            ['btn-stmt', 'btn-pstmt', 'btn-cstmt'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.classList.remove('bg-white', 'shadow-sm', 'text-blue-700');
+                btn.classList.add('text-slate-600', 'hover:bg-white');
+            });
+            const active = document.getElementById(`btn-${type}`);
+            active.classList.add('bg-white', 'shadow-sm', 'text-blue-700');
+            active.classList.remove('text-slate-600', 'hover:bg-white');
+
+            const desc = document.getElementById('statement-desc');
+            if(type === 'stmt') desc.innerHTML = "<strong>Statement:</strong> Standard access. Compiles query every time. <span class='text-red-600'>SQL Injection Risk!</span>";
+            if(type === 'pstmt') desc.innerHTML = "<strong>PreparedStatement:</strong> <span class='text-green-600'>Recommended.</span> Pre-compiled (fast) & secure against injection using `?` placeholders.";
+            if(type === 'cstmt') desc.innerHTML = "<strong>CallableStatement:</strong> Used to execute Stored Procedures in the database.";
+        }
+
+        function renderDBTable() {
+            const tbody = document.getElementById('db-table-body');
+            tbody.innerHTML = currentState.db.map(s => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-3 border-b border-slate-100 font-mono text-slate-600">${s.id}</td>
+                    <td class="p-3 border-b border-slate-100">${s.name}</td>
+                    <td class="p-3 border-b border-slate-100"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">${s.marks}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function runInsert() {
+            const id = document.getElementById('input-id').value;
+            const name = document.getElementById('input-name').value;
+            const marks = document.getElementById('input-marks').value;
+            const log = document.getElementById('query-log');
+
+            if(!id || !name || !marks) {
+                log.innerText = "> Error: Missing parameters (?)";
+                log.classList.add('text-red-500');
+                return;
+            }
+
+            // Simulate loading
+            log.innerText = "> Executing Update...";
+            log.classList.remove('text-red-500');
+            log.classList.add('text-yellow-500');
+
+            setTimeout(() => {
+                currentState.db.push({ id, name, marks });
+                renderDBTable();
+                
+                // Clear inputs
+                document.getElementById('input-id').value = '';
+                document.getElementById('input-name').value = '';
+                document.getElementById('input-marks').value = '';
+                
+                log.innerText = `> 1 row affected. Inserted ID: ${id}`;
+                log.classList.remove('text-yellow-500');
+                log.classList.add('text-green-500');
+            }, 600);
+        }
+
+        // --- Logic: ResultSet ---
+        function renderRSTable() {
+            const tbody = document.getElementById('rs-table-body');
+            const data = currentState.db; // Use same data
+            
+            // Add "Before First" and "After Last" Logic visualizers
+            let rows = '';
+            
+            // Row Logic
+            for(let i = 0; i < data.length; i++) {
+                const isActive = i === currentState.resultSetIndex;
+                rows += `
+                    <tr class="${isActive ? 'bg-yellow-100' : 'bg-white'} border-b border-slate-200 transition-colors duration-300">
+                        <td class="p-3 text-center">${isActive ? '<i class="fas fa-caret-right text-2xl text-blue-600"></i>' : ''}</td>
+                        <td class="p-3 font-mono text-slate-500">${i + 1}</td>
+                        <td class="p-3 font-bold text-slate-700">${data[i].id}: ${data[i].name}</td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = rows;
+            
+            updateRSStatus();
+        }
+
+        function rsMove(action) {
+            const max = currentState.db.length - 1;
+            
+            if(action === 'first') currentState.resultSetIndex = 0;
+            if(action === 'last') currentState.resultSetIndex = max;
+            if(action === 'next') {
+                if(currentState.resultSetIndex < max + 1) currentState.resultSetIndex++;
+            }
+            if(action === 'previous') {
+                if(currentState.resultSetIndex > -1) currentState.resultSetIndex--;
+            }
+
+            // Boundaries
+            if(currentState.resultSetIndex < -1) currentState.resultSetIndex = -1;
+            if(currentState.resultSetIndex > max + 1) currentState.resultSetIndex = max + 1;
+
+            renderRSTable();
+        }
+
+        function updateRSStatus() {
+            const idx = currentState.resultSetIndex;
+            const max = currentState.db.length;
+            const statusEl = document.getElementById('rs-status');
+            
+            if (idx === -1) statusEl.innerText = "Cursor is Before First Row (Initial). rs.next() required.";
+            else if (idx === max) statusEl.innerText = "Cursor is After Last Row. rs.next() will return false.";
+            else statusEl.innerText = `Cursor on Row ${idx + 1}. Reading data...`;
+        }
+
+        // --- Logic: Transactions ---
+        function startTransaction() {
+            if(currentState.accountA < 500) {
+                alert("Insufficient funds!"); 
+                return;
+            }
+
+            const btn = document.getElementById('btn-transfer');
+            const actions = document.getElementById('trans-actions');
+            const status = document.getElementById('trans-status');
+            const log = document.getElementById('trans-log');
+            const balA = document.getElementById('bal-a');
+            const balB = document.getElementById('bal-b');
+
+            // Visual Update - Pending State
+            currentState.accountA -= 500;
+            currentState.accountB += 500;
+            
+            balA.innerText = currentState.accountA;
+            balB.innerText = currentState.accountB;
+            balA.classList.add('text-yellow-600');
+            balB.classList.add('text-yellow-600');
+
+            btn.classList.add('hidden');
+            actions.classList.remove('hidden', 'opacity-0');
+            status.innerText = "Transaction pending... Changes made in temporary buffer.";
+            log.innerHTML += `<div>> UPDATE Accounts SET bal = bal - 500... <span class="text-yellow-400">PENDING</span></div>`;
+        }
+
+        function commitTransaction() {
+            const actions = document.getElementById('trans-actions');
+            const btn = document.getElementById('btn-transfer');
+            const status = document.getElementById('trans-status');
+            const log = document.getElementById('trans-log');
+            const balA = document.getElementById('bal-a');
+            const balB = document.getElementById('bal-b');
+
+            // Finalize
+            balA.classList.remove('text-yellow-600');
+            balB.classList.remove('text-yellow-600');
+            
+            actions.classList.add('hidden');
+            btn.classList.remove('hidden');
+            btn.innerText = "Start New Transfer";
+            
+            status.innerHTML = "<span class='text-green-600 font-bold'><i class='fas fa-check'></i> Transaction Committed! DB Updated.</span>";
+            log.innerHTML += `<div>> con.commit(); <span class="text-green-400">SUCCESS</span></div>`;
+        }
+
+        function rollbackTransaction() {
+            const actions = document.getElementById('trans-actions');
+            const btn = document.getElementById('btn-transfer');
+            const status = document.getElementById('trans-status');
+            const log = document.getElementById('trans-log');
+            const balA = document.getElementById('bal-a');
+            const balB = document.getElementById('bal-b');
+
+            // Revert
+            currentState.accountA += 500;
+            currentState.accountB -= 500;
+            balA.innerText = currentState.accountA;
+            balB.innerText = currentState.accountB;
+            balA.classList.remove('text-yellow-600');
+            balB.classList.remove('text-yellow-600');
+
+            actions.classList.add('hidden');
+            btn.classList.remove('hidden');
+            btn.innerText = "Start New Transfer";
+
+            status.innerHTML = "<span class='text-red-600 font-bold'><i class='fas fa-undo'></i> Rolled Back! No changes saved.</span>";
+            log.innerHTML += `<div>> con.rollback(); <span class="text-red-400">REVERTED</span></div>`;
+        }
+
+        // Mobile Menu Toggle
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            if(!sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        // Init
+        renderContent('overview');
+
+    </script>
+    
+    <!-- Visualization & Content Choices:
+         1. Driver Comparison: Chart.js Bar Chart. 
+            Goal: Visualize abstract "Pros/Cons" into quantifiable "Scores".
+            Interaction: Tooltips on hover to see score details.
+         2. Connection Lab: Vertical interactive list + Code Block.
+            Goal: Break down the 7-step process.
+            Interaction: Clicking a step highlights specific lines of code in the block.
+         3. CRUD Console: DOM Manipulation + JS Object Array.
+            Goal: Simulate database persistence without a backend.
+            Interaction: Form inputs push to array -> re-renders HTML Table.
+         4. ResultSet: HTML Table with dynamic CSS classes.
+            Goal: Visualize the invisible "Cursor" concept.
+            Interaction: Buttons manipulate an index variable, updating row styling.
+         5. Transactions: JS State Logic (Temporary variables).
+            Goal: Teach Atomicity.
+            Interaction: Two-stage commit process (Stage 1: Pending visual, Stage 2: Commit/Rollback).
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. All visuals are HTML/CSS or Chart.js (Canvas). -->
+</body>
+</html>
